@@ -2,15 +2,9 @@ import { Router, Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
-import { z } from "zod";
+import { LoginSchema } from "./auth.validation";
 
 const router = Router();
-
-// validation schema
-const LoginSchema = z.object({
-  email: z.email(),
-  password: z.string().min(1),
-});
 
 router.post(
   "/login",
