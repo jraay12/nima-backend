@@ -4,11 +4,13 @@ import { prisma } from "../../lib/prisma";
 import { upload } from "../../lib/multer";
 import { cleanupFiles } from "../../utils/imageCleanUp";
 import fs from "node:fs/promises";
+import { authMiddleware } from "../../middlewares/auth.middleware";
 
 const router = Router();
 
 router.post(
   "/create",
+  authMiddleware,
   upload.fields([
     { name: "event_image", maxCount: 1 },
     { name: "speaker_images", maxCount: 10 },
@@ -84,7 +86,7 @@ router.post(
 
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params as {id: string};
+    const { id } = req.params as { id: string };
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -109,29 +111,26 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-router.get(
-  "/",
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const events = await prisma.event.findMany({
-        include: {
-          featureSpeakers: true,
-          sponsors: true,
-        },
-        orderBy: {
-          event_date: "asc",
-        },
-      });
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const events = await prisma.event.findMany({
+      include: {
+        featureSpeakers: true,
+        sponsors: true,
+      },
+      orderBy: {
+        event_date: "asc",
+      },
+    });
 
-      return res.status(200).json({
-        message: "Events fetched successfully",
-        count: events.length,
-        events,
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      message: "Events fetched successfully",
+      count: events.length,
+      events,
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 export default router;
