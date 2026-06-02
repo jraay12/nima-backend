@@ -3,7 +3,6 @@ import { CreateEventSchema } from "./events.validation";
 import { prisma } from "../../lib/prisma";
 import { upload } from "../../lib/multer";
 import { cleanupFiles } from "../../utils/imageCleanUp";
-import fs from "node:fs/promises";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 
 const router = Router();
