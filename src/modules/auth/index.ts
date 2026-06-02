@@ -3,12 +3,13 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
 import { LoginSchema } from "./auth.validation";
+import { authMiddleware, AuthRequest } from "../../middlewares/auth.middleware";
 
 const router = Router();
 
 router.post(
   "/login",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       // 1. validate input
       const { email, password } = LoginSchema.parse(req.body);
@@ -55,6 +56,41 @@ router.post(
           first_name: user.first_name,
           last_name: user.last_name,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get(
+  "/me",
+  authMiddleware,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      const {password, ...safe} = user
+
+      return res.status(200).json({
+        message: "User fetched successfully",
+        safe,
       });
     } catch (error) {
       next(error);

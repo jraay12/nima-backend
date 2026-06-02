@@ -6,22 +6,18 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let folder = "uploads";
 
-    // decide folder based on field name
-    switch (file.fieldname) {
-      case "event_image":
-        folder = "events";
-        break;
-
-      case "speaker_images":
-        folder = "speaker";
-        break;
-
-      case "member":
-        folder = "member";
-        break;
+    // ─────────────────────────────
+    // FIX: use prefix matching
+    // ─────────────────────────────
+    if (file.fieldname === "event_image") {
+      folder = "events";
+    } else if (file.fieldname.startsWith("speaker_images_")) {
+      folder = "speaker";
+    } else if (file.fieldname.startsWith("member")) {
+      folder = "member";
     }
 
-    const dir = `./public/${folder}`;
+    const dir = path.join("./public", folder);
 
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -31,8 +27,9 @@ const storage = multer.diskStorage({
   },
 
   filename: function (_req, file, cb) {
+    // safer unique filename (avoids collisions)
     const uniqueName =
-      Date.now() + path.extname(file.originalname);
+      `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
 
     cb(null, uniqueName);
   },

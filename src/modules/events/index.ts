@@ -10,10 +10,7 @@ const router = Router();
 router.post(
   "/create",
   authMiddleware,
-  upload.fields([
-    { name: "event_image", maxCount: 1 },
-    { name: "speaker_images", maxCount: 10 },
-  ]),
+  upload.any(),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsedBody = {
@@ -27,24 +24,43 @@ router.post(
 
       const data = CreateEventSchema.parse(parsedBody);
 
-      const files = req.files as any;
+      const files = req.files as Express.Multer.File[];
 
-      const eventImage = files?.event_image?.[0];
-      const eventImagePath = `/public/events/${eventImage.filename}`;
-      const speakerFiles = files?.speaker_images || [];
+      // ─────────────────────────────
+      // EVENT IMAGE
+      // ─────────────────────────────
+      const eventImage = files.find((f) => f.fieldname === "event_image");
+      const eventImagePath = eventImage
+        ? `/public/events/${eventImage.filename}`
+        : null;
 
+      // ─────────────────────────────
+      // SPEAKER IMAGES (INDEXED FIX)
+      // ─────────────────────────────
+      const speakerImageMap: Record<number, string> = {};
+      files.forEach((file) => {
+        if (file.fieldname.startsWith("speaker_images_")) {
+          const index = Number(file.fieldname.split("_")[2]);
+          speakerImageMap[index] = `/public/speaker/${file.filename}`;
+        }
+      });
+
+      // ─────────────────────────────
+      // BUILD SPEAKERS
+      // ─────────────────────────────
       const speakers =
         data.featureSpeakers?.map((speaker: any, index: number) => ({
           fullname: speaker.fullname,
           role: speaker.role,
           title: speaker.title,
           speciality: speaker.speciality,
-          image_path: speakerFiles[index]
-            ? `/public/speaker/${speakerFiles[index].filename}`
-            : null,
+          image_path: speakerImageMap[index] || null,
           description: speaker.description,
         })) || [];
 
+      // ─────────────────────────────
+      // CREATE EVENT
+      // ─────────────────────────────
       const event = await prisma.event.create({
         data: {
           title: data.title,
@@ -59,7 +75,7 @@ router.post(
           state: data.state,
           zipcode: data.zipcode,
 
-          image_path: eventImagePath ? eventImagePath : null,
+          image_path: eventImagePath,
           notes: data.notes,
 
           featureSpeakers: speakers.length ? { create: speakers } : undefined,
@@ -76,8 +92,6 @@ router.post(
       });
     } catch (error) {
       await cleanupFiles(req.files);
-
-      console.log(req.files);
       next(error);
     }
   },
