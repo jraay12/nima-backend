@@ -22,3 +22,60 @@ model User {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  badge       String
+
+  start_time  String
+  end_time    String
+  event_date  DateTime
+
+  venue       String
+  city        String
+  address     String
+  state       String
+  zipcode     Int
+
+  image_path  String?
+  notes       String?
+
+  // relations
+  featureSpeakers FeatureSpeaker[]
+  sponsors        Sponsor[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model FeatureSpeaker {
+  id          String   @id @default(cuid())
+
+  event_id    String?
+  event       Event?   @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  fullname    String
+  role        String
+  title       String
+  speciality  String
+
+  image_path  String?
+  description String?
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model Sponsor {
+  id          String   @id @default(cuid())
+
+  event_id    String?
+  event       Event?    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  name        String
+  link        String
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}

@@ -8,11 +8,11 @@ const storage = multer.diskStorage({
 
     // decide folder based on field name
     switch (file.fieldname) {
-      case "events":
+      case "event_image":
         folder = "events";
         break;
 
-      case "speaker":
+      case "speaker_images":
         folder = "speaker";
         break;
 
