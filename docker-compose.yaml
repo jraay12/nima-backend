@@ -1,0 +1,49 @@
+services:
+
+  # app:
+  #   image: jraay12/multi-tenant-helpdesk-api:1.0.0
+  #   container_name: multi_tenant_helpdesk
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3010:3000"
+  #   env_file:
+  #     - ./.env
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   command: sh -c "npx prisma migrate deploy && node dist/server.js"
+
+  db:
+    image: mysql:8.0
+    container_name: nima-backend
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: qwerty
+      MYSQL_DATABASE: nima-db
+    ports:
+      - "3306:3306"
+    volumes:
+      - nima_backend_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pqwerty"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: nima_backend_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: "qwerty"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  nima_backend_data:
