@@ -29,6 +29,7 @@ router.post(
       const files = req.files as any;
 
       const eventImage = files?.event_image?.[0];
+      const eventImagePath = `/public/events/${eventImage.filename}`
       const speakerFiles = files?.speaker_images || [];
 
       const speakers =
@@ -57,7 +58,7 @@ router.post(
           state: data.state,
           zipcode: data.zipcode,
 
-          image_path: eventImage ? eventImage.filename : null,
+          image_path: eventImagePath ? eventImagePath : null,
           notes: data.notes,
 
           featureSpeakers: speakers.length ? { create: speakers } : undefined,
