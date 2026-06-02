@@ -29,7 +29,7 @@ router.post(
       const files = req.files as any;
 
       const eventImage = files?.event_image?.[0];
-      const eventImagePath = `/public/events/${eventImage.filename}`
+      const eventImagePath = `/public/events/${eventImage.filename}`;
       const speakerFiles = files?.speaker_images || [];
 
       const speakers =
@@ -74,13 +74,64 @@ router.post(
         event,
       });
     } catch (error) {
-      
-      await cleanupFiles(req.files)
+      await cleanupFiles(req.files);
 
-      console.log(req.files)
+      console.log(req.files);
       next(error);
     }
   },
+);
+
+router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params as {id: string};
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        featureSpeakers: true,
+        sponsors: true,
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        message: "Event not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Event fetched successfully",
+      event,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get(
+  "/",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const events = await prisma.event.findMany({
+        include: {
+          featureSpeakers: true,
+          sponsors: true,
+        },
+        orderBy: {
+          event_date: "asc",
+        },
+      });
+
+      return res.status(200).json({
+        message: "Events fetched successfully",
+        count: events.length,
+        events,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 export default router;
