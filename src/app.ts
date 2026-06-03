@@ -3,6 +3,7 @@ import cors, { CorsOptions } from "cors";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import authRoutes from "./modules/auth/index";
 import eventRoutes from "./modules/events/index"
+import memberRoutes from "./modules/members/index"
 import path from "path";
 const app = express();
 
@@ -19,6 +20,8 @@ app.use("/public", express.static(path.join(process.cwd(), "public")));
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/event", eventRoutes);
+app.use("/api/v1/members", memberRoutes);
+
 
 app.use(errorMiddleware);
 

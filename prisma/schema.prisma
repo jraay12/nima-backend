@@ -79,3 +79,29 @@ model Sponsor {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }
+
+model Member {
+  id                      String   @id @default(cuid())
+
+  full_name              String?
+  practice_name          String?
+  is_boardMember         Boolean @default(false)
+  board_title            String?
+  practice_email         String?
+  practice_referral_email String?
+  practice_contact_number String?
+  fax_number             String?
+
+  website                String?
+
+  biography              Json?
+
+  image_path            String?
+
+  city                  String?
+  state                 String?
+  country               String?
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+}
