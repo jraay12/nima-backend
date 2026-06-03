@@ -7,7 +7,6 @@ import { authMiddleware } from "../../middlewares/auth.middleware";
 import path from "node:path";
 import fs from "fs/promises";
 
-
 const router = Router();
 
 router.post(
@@ -22,9 +21,7 @@ router.post(
         featureSpeakers: req.body.featureSpeakers
           ? JSON.parse(req.body.featureSpeakers)
           : undefined,
-        sponsors: req.body.sponsors
-          ? JSON.parse(req.body.sponsors)
-          : undefined,
+        sponsors: req.body.sponsors ? JSON.parse(req.body.sponsors) : undefined,
       };
 
       const data = CreateEventSchema.parse(parsedBody);
@@ -40,7 +37,6 @@ router.post(
         ? `/public/events/${eventImageFile.filename}`
         : null;
 
-      // If updating and a new event image was uploaded, delete the old one
       if (isUpdate && newEventImagePath) {
         const existing = await prisma.event.findUnique({
           where: { id: eventId },
@@ -48,16 +44,13 @@ router.post(
         });
         if (existing?.image_path) {
           const oldPath = path.join(process.cwd(), existing.image_path);
-          await fs.unlink(oldPath).catch(() => {
-            // Ignore if file already missing
-          });
+          await fs.unlink(oldPath).catch(() => {});
         }
       }
 
       // ─────────────────────────────
       // SPEAKER IMAGES (INDEXED)
       // ─────────────────────────────
-      // Each speaker file is named: speaker_images_{index}
       const speakerImageMap: Record<number, string> = {};
       files.forEach((file) => {
         if (file.fieldname.startsWith("speaker_images_")) {
@@ -67,32 +60,20 @@ router.post(
       });
 
       // ─────────────────────────────
-      // BUILD SPEAKERS
+      // CREATE
       // ─────────────────────────────
-      // Each speaker in featureSpeakers may have an `id` (existing) or not (new).
-      // The frontend should send `id: null/undefined` for new speakers.
-      const speakers = (data.featureSpeakers ?? []).map(
-        (speaker: any, index: number) => {
-          const hasNewImage = speakerImageMap[index] !== undefined;
-          return {
-            id: speaker.id || undefined,
-            // image_path from form body = current/old path (string sent by frontend)
-            existing_image_path: speaker.image_path || null,
+      if (!isUpdate) {
+        const speakers = (data.featureSpeakers ?? []).map(
+          (speaker: any, index: number) => ({
             fullname: speaker.fullname,
             role: speaker.role,
             title: speaker.title,
             speciality: speaker.speciality,
             description: speaker.description,
-            // New upload takes priority; fall back to whatever the frontend sent
-            newImagePath: hasNewImage ? speakerImageMap[index] : null,
-          };
-        },
-      );
+            image_path: speakerImageMap[index] ?? null,
+          }),
+        );
 
-      // ─────────────────────────────
-      // CREATE
-      // ─────────────────────────────
-      if (!isUpdate) {
         const event = await prisma.event.create({
           data: {
             title: data.title,
@@ -107,36 +88,45 @@ router.post(
             zipcode: data.zipcode,
             image_path: newEventImagePath,
             notes: data.notes,
-            featureSpeakers: speakers.length
-              ? {
-                  create: speakers.map((s) => ({
-                    fullname: s.fullname,
-                    role: s.role,
-                    title: s.title,
-                    speciality: s.speciality,
-                    image_path: s.newImagePath,
-                    description: s.description,
-                  })),
-                }
-              : undefined,
+            featureSpeakers: speakers.length ? { create: speakers } : undefined,
             sponsors: data.sponsors?.length
               ? { create: data.sponsors }
               : undefined,
           },
         });
 
-        return res.status(201).json({ message: "Event created successfully", event });
+        return res
+          .status(201)
+          .json({ message: "Event created successfully", event });
       }
 
       // ─────────────────────────────
       // UPDATE
       // ─────────────────────────────
 
-      // Fetch existing speakers so we know which ones were removed or had images replaced
       const existingSpeakers = await prisma.featureSpeaker.findMany({
         where: { event_id: eventId },
         select: { id: true, image_path: true },
       });
+
+      const existingSpeakerIdSet = new Set(existingSpeakers.map((s) => s.id));
+
+      const speakers = (data.featureSpeakers ?? []).map(
+        (speaker: any, index: number) => {
+          const isRealId = speaker.id && existingSpeakerIdSet.has(speaker.id);
+          const hasNewImage = speakerImageMap[index] !== undefined;
+          return {
+            id: isRealId ? speaker.id : undefined,
+            existing_image_path: speaker.image_path ?? null,
+            fullname: speaker.fullname,
+            role: speaker.role,
+            title: speaker.title,
+            speciality: speaker.speciality,
+            description: speaker.description,
+            newImagePath: hasNewImage ? speakerImageMap[index] : null,
+          };
+        },
+      );
 
       const incomingSpeakerIds = new Set(
         speakers.filter((s) => s.id).map((s) => s.id!),
@@ -147,6 +137,9 @@ router.post(
         (s) => !incomingSpeakerIds.has(s.id),
       );
 
+      console.log("incomingSpeakerIds", [...incomingSpeakerIds]);
+      console.log("existingSpeakers", existingSpeakers);
+      console.log("removedSpeakers", removedSpeakers);
       await Promise.all(
         removedSpeakers.map(async (s) => {
           if (s.image_path) {
@@ -160,14 +153,13 @@ router.post(
       // Upsert each speaker
       await Promise.all(
         speakers.map(async (s) => {
-          const resolvedImagePath = s.newImagePath ?? s.existing_image_path;
-
           if (s.id) {
-            // Existing speaker — if a new image was uploaded, delete the old one
+            // If a new image was uploaded, delete the old file first
             if (s.newImagePath) {
               const old = existingSpeakers.find((e) => e.id === s.id);
               if (old?.image_path) {
                 const oldPath = path.join(process.cwd(), old.image_path);
+                console.log("Deleting old speaker image:", oldPath); // ← add this
                 await fs.unlink(oldPath).catch(() => {});
               }
             }
@@ -180,7 +172,8 @@ router.post(
                 title: s.title,
                 speciality: s.speciality,
                 description: s.description,
-                image_path: resolvedImagePath,
+                // ✅ Only update image_path if a new file was uploaded
+                ...(s.newImagePath ? { image_path: s.newImagePath } : {}),
               },
             });
           } else {
@@ -193,7 +186,7 @@ router.post(
                 title: s.title,
                 speciality: s.speciality,
                 description: s.description,
-                image_path: resolvedImagePath,
+                image_path: s.newImagePath ?? s.existing_image_path,
               },
             });
           }
@@ -202,7 +195,6 @@ router.post(
 
       // ─────────────────────────────
       // SPONSORS (delete all, re-create)
-      // Sponsors have no images, so a simple replace is fine
       // ─────────────────────────────
       await prisma.sponsor.deleteMany({ where: { event_id: eventId } });
 
@@ -219,7 +211,6 @@ router.post(
           address: data.address,
           state: data.state,
           zipcode: data.zipcode,
-          // Only overwrite image_path if a new file was uploaded
           ...(newEventImagePath && { image_path: newEventImagePath }),
           notes: data.notes,
           sponsors: data.sponsors?.length
@@ -232,7 +223,9 @@ router.post(
         },
       });
 
-      return res.status(200).json({ message: "Event updated successfully", event: updatedEvent });
+      return res
+        .status(200)
+        .json({ message: "Event updated successfully", event: updatedEvent });
     } catch (error) {
       await cleanupFiles(req.files);
       next(error);

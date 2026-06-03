@@ -20,6 +20,7 @@ export const CreateEventSchema = z.object({
   featureSpeakers: z
     .array(
       z.object({
+        id: z.string().optional(), 
         fullname: z.string(),
         role: z.string(),
         title: z.string(),
