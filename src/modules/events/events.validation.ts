@@ -24,7 +24,7 @@ export const CreateEventSchema = z.object({
         role: z.string(),
         title: z.string(),
         speciality: z.string(),
-        image_path: z.string().optional(),
+        image_path: z.string().nullable().optional(),
         description: z.string().optional(),
       })
     )
