@@ -6,6 +6,7 @@ export const createMemberSchema = z.object({
 
   practice_email: z.string().email().optional(),
   practice_referral_email: z.string().email().optional(),
+  speciality: z.string().optional(),
 
   practice_contact_number: z.string().optional(),
   fax_number: z.string().optional(),
@@ -18,7 +19,8 @@ export const createMemberSchema = z.object({
   is_boardMember: z.union([z.boolean(), z.string()]).optional(),
   board_title: z.string().optional(),
 
-
   // biography comes as string (we parse JSON manually)
   biography: z.any().optional(),
+
+  year: z.string(),
 });

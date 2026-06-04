@@ -1,19 +1,19 @@
 services:
 
-  app:
-    image: jraay12/nima-backend:latest
-    container_name: nima
-    restart: unless-stopped
-    ports:
-      - "3010:3000"
-    env_file:
-      - ./.env
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - ./public:/usr/src/app/public
-    command: sh -c "npx prisma migrate deploy && node dist/server.js"
+  # app:
+  #   image: jraay12/nima-backend:latest
+  #   container_name: nima
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3010:3000"
+  #   env_file:
+  #     - ./.env
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./public:/usr/src/app/public
+  #   command: sh -c "npx prisma migrate deploy && node dist/server.js"
 
   db:
     image: mysql:8.0

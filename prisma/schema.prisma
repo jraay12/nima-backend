@@ -85,6 +85,7 @@ model Member {
 
   full_name              String?
   practice_name          String?
+  speciality             String?
   is_boardMember         Boolean @default(false)
   board_title            String?
   practice_email         String?
@@ -102,6 +103,22 @@ model Member {
   state                 String?
   country               String?
 
+  renewals               MemberRenew[]
+
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
+}
+
+model MemberRenew {
+  id        String   @id @default(cuid())
+
+  year      String      
+
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([memberId])
 }

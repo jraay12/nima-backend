@@ -27,7 +27,6 @@ router.post(
         imageUrlPath = `/public/member/${memberFile.filename}`; // ✅
       }
 
-
       // ✅ Zod validation
       const parsedBody = createMemberSchema.parse(req.body);
 
@@ -50,7 +49,7 @@ router.post(
         data: {
           full_name: parsedBody.full_name,
           practice_name: parsedBody.practice_name,
-
+          speciality: parsedBody.speciality,
           // no need to force boolean logic anymore unless you want override
           is_boardMember:
             parsedBody.is_boardMember === true ||
@@ -72,6 +71,11 @@ router.post(
           city: parsedBody.city,
           state: parsedBody.state,
           country: parsedBody.country,
+          renewals: {
+            create: {
+              year: parsedBody.year,
+            },
+          },
         },
       });
 
