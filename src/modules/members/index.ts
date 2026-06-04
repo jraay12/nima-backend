@@ -132,9 +132,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       orderBy: {
         created_at: "desc",
       },
-      where: {
-        is_active: true,
-      },
+
       include: {
         renewals: {
           orderBy: {
@@ -168,7 +166,7 @@ router.get(
       const members = await prisma.member.findMany({
         where: {
           is_boardMember: true,
-          is_active: true
+          is_active: true,
         },
       });
 
