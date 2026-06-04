@@ -108,10 +108,26 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       orderBy: {
         created_at: "desc",
       },
+      include: {
+        renewals: {
+          orderBy: {
+            created_at: "desc",
+          },
+          take: 1,
+          select: {
+            year: true,
+          },
+        },
+      },
     });
 
+    const cleanFormat = members.map((item) => ({
+      ...item,
+      year: item.renewals[0].year ?? null,
+    }));
+
     return res.status(200).json({
-      data: members,
+      data: cleanFormat,
     });
   } catch (error) {
     next(error);
