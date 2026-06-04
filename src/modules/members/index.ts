@@ -13,6 +13,7 @@ router.post(
   upload.fields([{ name: "member", maxCount: 1 }]),
   async (req: Request, res: Response, next: NextFunction) => {
     let filePath: string | null = null;
+    let imageUrlPath: string | null = null;
 
     try {
       const files = req.files as {
@@ -23,7 +24,9 @@ router.post(
 
       if (memberFile) {
         filePath = memberFile.path;
+        imageUrlPath = `/public/member/${memberFile.filename}`; // ✅
       }
+
 
       // ✅ Zod validation
       const parsedBody = createMemberSchema.parse(req.body);
@@ -64,7 +67,7 @@ router.post(
 
           biography: biographyParsed,
 
-          image_path: filePath,
+          image_path: imageUrlPath,
 
           city: parsedBody.city,
           state: parsedBody.state,

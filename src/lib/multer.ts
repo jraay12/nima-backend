@@ -17,7 +17,8 @@ const storage = multer.diskStorage({
       folder = "member";
     }
 
-    const dir = path.join("./public", folder);
+    const dir = path.join(process.cwd(), "public", folder);
+
 
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
