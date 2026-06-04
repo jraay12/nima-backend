@@ -25,18 +25,18 @@ model User {
 
 model Event {
   id          String   @id @default(cuid())
-  title       String
-  badge       String
+  title       String?
+  badge       String?
 
-  start_time  String
-  end_time    String
-  event_date  DateTime
+  start_time  String?
+  end_time    String?
+  event_date  DateTime?
 
-  venue       String
-  city        String
-  address     String
-  state       String
-  zipcode     Int
+  venue       String?
+  city        String?
+  address     String?
+  state       String?
+  zipcode     Int?
 
   image_path  String?
   notes       String?
@@ -55,10 +55,10 @@ model FeatureSpeaker {
   event_id    String?
   event       Event?   @relation(fields: [event_id], references: [id], onDelete: Cascade)
 
-  fullname    String
-  role        String
-  title       String
-  speciality  String
+  fullname    String?
+  role        String?
+  title       String?
+  speciality  String?
 
   image_path  String?
   description String?
@@ -73,8 +73,8 @@ model Sponsor {
   event_id    String?
   event       Event?    @relation(fields: [event_id], references: [id], onDelete: Cascade)
 
-  name        String
-  link        String
+  name        String?
+  link        String?
 
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
