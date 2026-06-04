@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { prisma } from "../../lib/prisma";
 import { upload } from "../../lib/multer";
-import { authMiddleware } from "../../middlewares/auth.middleware";
+import { authMiddleware, AuthRequest } from "../../middlewares/auth.middleware";
 import fs from "fs/promises";
 import { createMemberSchema } from "./member.validation";
 
@@ -108,6 +108,9 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       orderBy: {
         created_at: "desc",
       },
+      where: {
+        is_active: true
+      },
       include: {
         renewals: {
           orderBy: {
@@ -169,5 +172,28 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     next(error);
   }
 });
+
+router.patch(
+  "/:id/deactivate",
+  authMiddleware,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as { id: string };
+
+      await prisma.member.update({
+        where: {
+          id,
+        },
+        data: {
+          is_active: false,
+        },
+      });
+
+      return res.status(200).json({ message: "Successfully deactivate" });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default router;
