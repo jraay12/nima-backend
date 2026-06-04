@@ -168,6 +168,7 @@ router.get(
       const members = await prisma.member.findMany({
         where: {
           is_boardMember: true,
+          is_active: true
         },
       });
 
