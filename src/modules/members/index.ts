@@ -4,6 +4,7 @@ import { upload } from "../../lib/multer";
 import { authMiddleware, AuthRequest } from "../../middlewares/auth.middleware";
 import fs from "fs/promises";
 import { createMemberSchema } from "./member.validation";
+import path from "path";
 
 const router = Router();
 
@@ -24,15 +25,12 @@ router.post(
 
       if (memberFile) {
         filePath = memberFile.path;
-        imageUrlPath = `/public/member/${memberFile.filename}`; // ✅
+        imageUrlPath = `/public/member/${memberFile.filename}`;
       }
 
-      // ✅ Zod validation
       const parsedBody = createMemberSchema.parse(req.body);
 
-      // ✅ Biography parsing (Google Docs JSON style supported)
       let biographyParsed: any = null;
-
       if (parsedBody.biography) {
         try {
           biographyParsed =
@@ -44,33 +42,56 @@ router.post(
         }
       }
 
-      // ✅ Prisma create (UPDATED SCHEMA)
-      const member = await prisma.member.create({
-        data: {
-          full_name: parsedBody.full_name,
-          practice_name: parsedBody.practice_name,
-          speciality: parsedBody.speciality,
-          // no need to force boolean logic anymore unless you want override
-          is_boardMember:
-            parsedBody.is_boardMember === true ||
-            parsedBody.is_boardMember === "true",
+      const isUpdate = !!parsedBody.id;
 
-          board_title: parsedBody.board_title || null,
+      // If updating and a new image was uploaded, delete the old one
+      if (isUpdate && memberFile) {
+        const existing = await prisma.member.findUnique({
+          where: { id: parsedBody.id },
+          select: { image_path: true },
+        });
 
-          practice_email: parsedBody.practice_email,
-          practice_referral_email: parsedBody.practice_referral_email,
-          practice_contact_number: parsedBody.practice_contact_number,
-          fax_number: parsedBody.fax_number,
+        if (existing?.image_path) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../..",
+            existing.image_path,
+          );
+          await fs.unlink(oldFilePath).catch(() => {}); // silent fail if already gone
+        }
+      }
 
-          website: parsedBody.website || null,
+      const memberData = {
+        full_name: parsedBody.full_name,
+        practice_name: parsedBody.practice_name,
+        speciality: parsedBody.speciality,
+        is_boardMember:
+          parsedBody.is_boardMember === true ||
+          parsedBody.is_boardMember === "true",
+        board_title: parsedBody.board_title || null,
+        practice_email: parsedBody.practice_email,
+        practice_referral_email: parsedBody.practice_referral_email,
+        practice_contact_number: parsedBody.practice_contact_number,
+        fax_number: parsedBody.fax_number,
+        website: parsedBody.website || null,
+        biography: biographyParsed,
+        city: parsedBody.city,
+        state: parsedBody.state,
+        country: parsedBody.country,
+        // Only update image if a new one was uploaded, otherwise keep existing
+        ...(imageUrlPath && { image_path: imageUrlPath }),
+      };
 
-          biography: biographyParsed,
-
-          image_path: imageUrlPath,
-
-          city: parsedBody.city,
-          state: parsedBody.state,
-          country: parsedBody.country,
+      const member = await prisma.member.upsert({
+        where: {
+          id: parsedBody.id ?? "", // empty string won't match anything → triggers create
+        },
+        update: {
+          ...memberData,
+        },
+        create: {
+          ...memberData,
+          image_path: imageUrlPath, // on create always set it (even if null)
           renewals: {
             create: {
               year: parsedBody.year,
@@ -79,12 +100,15 @@ router.post(
         },
       });
 
-      return res.status(201).json({
+      return res.status(isUpdate ? 200 : 201).json({
         success: true,
-        message: "Member created successfully",
+        message: isUpdate
+          ? "Member updated successfully"
+          : "Member created successfully",
         data: member,
       });
     } catch (error: any) {
+      // Clean up uploaded file if something went wrong
       if (filePath) {
         await fs.unlink(filePath).catch(() => {});
       }
@@ -109,7 +133,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         created_at: "desc",
       },
       where: {
-        is_active: true
+        is_active: true,
       },
       include: {
         renewals: {
